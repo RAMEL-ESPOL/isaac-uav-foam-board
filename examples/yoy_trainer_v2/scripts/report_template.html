@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vuelo SITL — YOY Trainer v2</title>
+<style>
+  :root{
+    --ground:#0A0F14; --panel:#111A22; --panel-2:#0D141B; --line:#1E2C38;
+    --ink:#D2DCE5; --ink-dim:#8B9AA8; --ink-faint:#5C6B79;
+    --trace:#FF9E2C; --nominal:#3FBFB4; --alarm:#F0483E; --violet:#8B7BD8;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --ground:#F5F4F0; --panel:#FFFFFF; --panel-2:#FAF9F6; --line:#DEDAD2;
+      --ink:#141C24; --ink-dim:#5A6672; --ink-faint:#8B96A1;
+      --trace:#C96A00; --nominal:#0E7C74; --alarm:#C4241C; --violet:#5B4BA8;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0A0F14; --panel:#111A22; --panel-2:#0D141B; --line:#1E2C38;
+    --ink:#D2DCE5; --ink-dim:#8B9AA8; --ink-faint:#5C6B79;
+    --trace:#FF9E2C; --nominal:#3FBFB4; --alarm:#F0483E; --violet:#8B7BD8;
+  }
+  :root[data-theme="light"]{
+    --ground:#F5F4F0; --panel:#FFFFFF; --panel-2:#FAF9F6; --line:#DEDAD2;
+    --ink:#141C24; --ink-dim:#5A6672; --ink-faint:#8B96A1;
+    --trace:#C96A00; --nominal:#0E7C74; --alarm:#C4241C; --violet:#5B4BA8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--ground); color:var(--ink); font-family:var(--mono); font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px; margin:0 auto; padding:32px 20px 72px; display:flex; flex-direction:column; gap:28px}
+  .mast{display:flex; flex-direction:column; gap:10px; padding-bottom:22px; border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 16px}
+  h1{font-family:var(--sans); font-size:clamp(24px,4vw,36px); line-height:1.12; margin:0; letter-spacing:-.022em; font-weight:640; text-wrap:balance}
+  .sub{color:var(--ink-dim); max-width:66ch; font-size:13.5px}
+  .verdict{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--alarm); padding:18px 20px; display:flex; flex-direction:column; gap:8px}
+  .verdict.ok{border-left-color:var(--nominal)}
+  .verdict .tag{font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--alarm)}
+  .verdict.ok .tag{color:var(--nominal)}
+  .verdict p{margin:0; font-size:14.5px; max-width:76ch}
+  .verdict b{color:var(--trace); font-weight:600}
+  .gauges{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line)}
+  .g{background:var(--panel); padding:15px 16px; display:flex; flex-direction:column; gap:3px}
+  .g .lbl{font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint)}
+  .g .val{font-size:27px; font-variant-numeric:tabular-nums; letter-spacing:-.02em; line-height:1.15}
+  .g .val small{font-size:14px; color:var(--ink-dim); letter-spacing:0}
+  .g .note{font-size:11.5px; color:var(--ink-dim)}
+  .g.bad .val{color:var(--alarm)} .g.warn .val{color:var(--trace)} .g.ok .val{color:var(--nominal)}
+  section{display:flex; flex-direction:column; gap:14px}
+  h2{font-family:var(--sans); font-size:12px; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-dim); margin:0; font-weight:600; display:flex; align-items:center; gap:12px}
+  h2::after{content:""; flex:1; height:1px; background:var(--line)}
+  .viewport{position:relative; background:var(--panel-2); border:1px solid var(--line)}
+  #scene{display:block; width:100%; height:clamp(340px,52vh,560px); cursor:grab; touch-action:none}
+  #scene.drag{cursor:grabbing}
+  .vtools{position:absolute; top:12px; left:12px; display:flex; gap:6px; flex-wrap:wrap}
+  .vtools label{display:flex; align-items:center; gap:7px; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); background:var(--panel); border:1px solid var(--line); padding:0 10px}
+  .vtools input[type=range]{width:90px; accent-color:var(--trace)}
+  .vtools output{min-width:3.2em; font-variant-numeric:tabular-nums; color:var(--ink)}
+  .vlegend{position:absolute; top:12px; right:12px; display:flex; flex-direction:column; gap:5px; font-size:10.5px; color:var(--ink-dim); text-align:right; pointer-events:none}
+  .vlegend i{display:inline-block; width:16px; height:2px; vertical-align:middle; margin-left:7px}
+  button{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; background:var(--panel); color:var(--ink-dim); border:1px solid var(--line); padding:6px 11px; cursor:pointer; transition:color .13s, border-color .13s}
+  button:hover{color:var(--ink); border-color:var(--ink-faint)}
+  button[aria-pressed="true"]{color:var(--trace); border-color:var(--trace)}
+  button:focus-visible{outline:2px solid var(--nominal); outline-offset:2px}
+  .transport{display:flex; align-items:center; gap:14px; padding:11px 14px; background:var(--panel); border:1px solid var(--line); border-top:none; flex-wrap:wrap}
+  .transport input[type=range]{flex:1; min-width:180px; accent-color:var(--trace)}
+  .tread{font-variant-numeric:tabular-nums; font-size:12.5px; color:var(--ink-dim); white-space:nowrap}
+  .tread b{color:var(--ink); font-weight:500}
+  .chain{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line)}
+  .step{background:var(--panel); padding:15px 16px; display:flex; flex-direction:column; gap:6px}
+  .step .n{font-size:10px; letter-spacing:.14em; color:var(--ink-faint)}
+  .step .v{font-size:19px; font-variant-numeric:tabular-nums; letter-spacing:-.015em}
+  .step .d{font-size:11.5px; color:var(--ink-dim); line-height:1.45}
+  .step.crit .v{color:var(--alarm)} .step.crit{border-left:2px solid var(--alarm)}
+  .step.good .v{color:var(--nominal)} .step.good{border-left:2px solid var(--nominal)}
+  .charts{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line)}
+  .chart{background:var(--panel); padding:12px 14px 8px; display:flex; flex-direction:column; gap:6px}
+  .chead{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap}
+  .chead .t{font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-dim)}
+  .chead .r{font-size:11.5px; color:var(--ink-faint); font-variant-numeric:tabular-nums}
+  .chart canvas{display:block; width:100%; height:120px; cursor:crosshair}
+  .foot{font-size:11.5px; color:var(--ink-faint); border-top:1px solid var(--line); padding-top:16px; max-width:72ch}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div class="eyebrow">
+      <span>SITL · ArduPilot + Isaac Sim</span><span id="e-name">__LOG_NAME__</span>
+      <span id="e-n"></span><span id="e-t"></span>
+    </div>
+    <h1 id="title">Registro de vuelo autónomo</h1>
+    <p class="sub">Trayectoria reconstruida del YOY Trainer v2 con verificación de factibilidad
+    del giro: si el radio mínimo alcanzable a la velocidad medida no cabe dentro del radio de
+    loiter comandado, la órbita no puede cerrarse por geometría, no por sintonía.</p>
+  </header>
+
+  <div class="verdict" id="verdict">
+    <span class="tag" id="v-tag"></span>
+    <p id="v-body"></p>
+  </div>
+
+  <div class="gauges" id="gauges"></div>
+
+  <section>
+    <h2>Trayectoria reconstruida</h2>
+    <div class="viewport">
+      <canvas id="scene"></canvas>
+      <div class="vtools">
+        <button id="v-iso" aria-pressed="true">Iso</button>
+        <button id="v-top" aria-pressed="false">Planta</button>
+        <button id="v-side" aria-pressed="false">Perfil</button>
+        <button id="v-fit">Encuadrar</button>
+        <label>Altitud <input id="v-zex" type="range" min="1" max="20" step="0.5" aria-label="Exageración vertical"><output id="v-zex-o"></output></label>
+      </div>
+      <div class="vlegend">
+        <span>alabeo bajo<i style="background:var(--nominal)"></i></span>
+        <span>intermedio<i style="background:var(--trace)"></i></span>
+        <span>sobre el límite<i style="background:var(--alarm)"></i></span>
+        <span>waypoints comandados<i style="background:var(--violet)"></i></span>
+      </div>
+    </div>
+    <div class="transport">
+      <button id="play">Reproducir</button>
+      <input id="scrub" type="range" min="0" value="0" step="1" aria-label="Tiempo de vuelo">
+      <span class="tread">t <b id="r-t">—</b> s · h <b id="r-alt">—</b> m s/suelo · V <b id="r-spd">—</b> m/s · φ <b id="r-roll">—</b>°</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Factibilidad del giro</h2>
+    <div class="chain" id="chain"></div>
+  </section>
+
+  <section>
+    <h2>Trazas temporales</h2>
+    <div class="charts">
+      <div class="chart">
+        <div class="chead"><span class="t">Alabeo φ</span><span class="r" id="h-roll"></span></div>
+        <canvas id="c-roll"></canvas>
+      </div>
+      <div class="chart">
+        <div class="chead"><span class="t">Velocidad aerodinámica</span><span class="r" id="h-spd"></span></div>
+        <canvas id="c-spd"></canvas>
+      </div>
+      <div class="chart" id="thr-box">
+        <div class="chead"><span class="t">Acelerador</span><span class="r" id="h-thr"></span></div>
+        <canvas id="c-thr"></canvas>
+      </div>
+      <div class="chart">
+        <div class="chead"><span class="t">Altitud</span><span class="r" id="h-alt"></span></div>
+        <canvas id="c-alt"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Generado por <code>plot_flight.py</code> a partir del CSV de
+  <code>autonomous_flight.py</code>. La traza se proyecta a un plano local con origen en el
+  primer punto con fijación GPS; el color codifica |φ| muestra a muestra. Las marcas violeta
+  son los waypoints que comanda el script de misión.</p>
+</div>
+
+<script>
+const DATA = __FLIGHT_DATA__;
+const P = DATA.pts, M = DATA.meta;
+// pts: [0]=t [1]=x [2]=y [3]=alt [4]=roll [5]=pitch [6]=spd [7]=throttle % (null in old logs)
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const rollColor = r => {
+  const a = Math.abs(r), L = M.rollLimit;
+  return a > L ? css('--alarm') : a > L*0.6 ? css('--trace') : css('--nominal');
+};
+const fmt = (v,d=0) => v.toFixed(d);
+
+/* ---------- cabecera ---------- */
+document.getElementById('e-n').textContent = M.samples.toLocaleString('es') + ' muestras';
+document.getElementById('e-t').textContent = M.tEnd + ' s';
+document.title = 'Vuelo SITL — ' + document.getElementById('e-name').textContent;
+document.getElementById('title').textContent = M.feasible
+  ? 'La órbita de loiter es alcanzable a la velocidad medida'
+  : 'La órbita de loiter es geométricamente imposible a la velocidad medida';
+
+const vd = document.getElementById('verdict');
+document.getElementById('v-tag').textContent = M.feasible ? 'Diagnóstico' : 'Causa raíz';
+if (M.feasible) vd.classList.add('ok');
+document.getElementById('v-body').innerHTML = M.feasible
+  ? `Velocidad media <b>${M.spdAvg} m/s</b> frente a los ${M.cruise} m/s de diseño. El radio de giro
+     mínimo con φ&nbsp;≤&nbsp;${M.rollLimit}° es <b>${M.rMin} m</b>, dentro del radio de loiter de
+     <b>${M.loiterRad} m</b>: la órbita sí puede cerrarse. Lo que quede de oscilación es sintonía,
+     no geometría.`
+  : `Velocidad media <b>${M.spdAvg} m/s</b>, ${fmt(M.spdAvg/M.cruise,1)}× el crucero de diseño de
+     ${M.cruise} m/s — la presión dinámica es <b>${M.qRatio}×</b> la nominal, así que las superficies
+     de control mandan ese factor más de momento del que esperan las ganancias. Con φ&nbsp;≤&nbsp;${M.rollLimit}°
+     el radio de giro mínimo es <b>${M.rMin} m</b>, mayor que el radio de loiter de <b>${M.loiterRad} m</b>:
+     el controlador pide un giro que la física no permite, satura el alabeo y el avión deriva.`;
+
+/* ---------- indicadores ---------- */
+const gauges = [
+  {lbl:'Alabeo máximo', val:M.rollMax, unit:'°', note:`límite ${M.rollLimit}°`, bad:M.rollMax > M.rollLimit*1.2},
+  {lbl:'Velocidad media', val:M.spdAvg, unit:' m/s', note:`diseño ${M.cruise} m/s`, bad:Math.abs(M.spdAvg-M.cruise) > M.cruise*0.25},
+  {lbl:'Dist. mínima al loiter', val:M.loitMin, unit:' m', note:`radio comandado ${M.loiterRad} m`, bad:M.loitMin > M.loiterRad*2},
+  {lbl:'Radio de giro mínimo', val:M.rMin, unit:' m', note:M.feasible?'cabe en la órbita':'no cabe en la órbita', bad:!M.feasible},
+];
+document.getElementById('gauges').innerHTML = gauges.map(g=>
+  `<div class="g ${g.bad?'bad':'ok'}"><span class="lbl">${g.lbl}</span>
+   <span class="val">${g.val}<small>${g.unit}</small></span><span class="note">${g.note}</span></div>`).join('');
+
+/* ---------- cadena ---------- */
+document.getElementById('chain').innerHTML = [
+  {n:'VELOCIDAD MEDIDA', v:M.spdAvg+' m/s', d:`Rango ${M.spdMin}–${M.spdMax} m/s. Crucero de diseño: ${M.cruise} m/s.`,
+   c:Math.abs(M.spdAvg-M.cruise) > M.cruise*0.25 ? 'crit':'good'},
+  {n:'PRESIÓN DINÁMICA', v:M.qRatio+'×', d:'Respecto a la nominal. Escala todas las fuerzas y momentos aerodinámicos.',
+   c:M.qRatio > 1.5 ? 'crit':'good'},
+  {n:'RADIO MÍNIMO', v:M.rMin+' m', d:`V²/(g·tan ${M.rollLimit}°). Radio de loiter comandado: ${M.loiterRad} m.`,
+   c:M.feasible ? 'good':'crit'},
+  {n:'ALABEO MÁXIMO', v:M.rollMax+'°', d:`Límite configurado ${M.rollLimit}°. Por encima indica saturación.`,
+   c:M.rollMax > M.rollLimit*1.2 ? 'crit':'good'},
+  {n:'CONVERGENCIA', v:M.loitMin+' m', d:'Distancia mínima alcanzada al punto de loiter durante todo el vuelo.',
+   c:M.loitMin > M.loiterRad*2 ? 'crit':'good'},
+].map(s=>`<div class="step ${s.c}"><span class="n">${s.n}</span><span class="v">${s.v}</span><span class="d">${s.d}</span></div>`).join('');
+
+document.getElementById('h-roll').textContent = `banda = ±${M.rollLimit}° (ROLL_LIMIT_DEG)`;
+document.getElementById('h-spd').textContent  = `línea = ${M.cruise} m/s de diseño`;
+document.getElementById('h-alt').textContent  = M.groundKnown
+  ? `línea = suelo (punto de armado, ${M.ground} m)`
+  : `línea = cota mínima registrada (${M.ground} m) — este log no trae el suelo real`;
+document.getElementById('h-thr').textContent  = `línea = ${M.trimThr} % de trim`;
+if(!M.hasThr) document.getElementById('thr-box').remove();
+
+/* ---------- proyección 3D ---------- */
+const xs=P.map(p=>p[1]), ys=P.map(p=>p[2]);
+const bx=[Math.min(...xs),Math.max(...xs)], by=[Math.min(...ys),Math.max(...ys)];
+const cx=(bx[0]+bx[1])/2, cy=(by[0]+by[1])/2;
+const span=Math.max(bx[1]-bx[0], by[1]-by[0], 200);
+const GRID = span > 1200 ? 250 : span > 400 ? 100 : 50;
+let ZEX  = Math.max(2, Math.min(14, span/Math.max(12, M.altMax-M.ground)));
+const wz = a => (a - M.ground) * ZEX;
+
+let cam={az:-0.62, el:0.52}, scale=1, ox=0, oy=0;
+function proj(x,y,z){
+  const ca=Math.cos(cam.az), sa=Math.sin(cam.az), ce=Math.cos(cam.el), se=Math.sin(cam.el);
+  const X=x*ca-y*sa, Y=x*sa+y*ca;
+  return [X*scale+ox, -(Y*se+z*ce)*scale+oy, z*se-Y*ce];
+}
+
+const scene=document.getElementById('scene'), sx=scene.getContext('2d');
+let head=P.length-1;
+const scrub=document.getElementById('scrub');
+scrub.max=P.length-1; scrub.value=head;
+
+function fit(){
+  const r=scene.getBoundingClientRect(), d=window.devicePixelRatio||1;
+  scene.width=r.width*d; scene.height=r.height*d; sx.setTransform(d,0,0,d,0,0);
+  frame();
+}
+
+// Fit the whole trajectory (flight path + its ground shadow + grid) in the
+// canvas for the current view angle and vertical exaggeration.
+function frame(){
+  const r=scene.getBoundingClientRect();
+  scale=1; ox=0; oy=0;
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  const add=q=>{ x0=Math.min(x0,q[0]); x1=Math.max(x1,q[0]); y0=Math.min(y0,q[1]); y1=Math.max(y1,q[1]); };
+  for(const p of P){ add(proj(p[1]-cx,p[2]-cy,wz(p[3]))); add(proj(p[1]-cx,p[2]-cy,0)); }
+  for(const gx of bx) for(const gy of by) add(proj(gx-cx,gy-cy,0));
+  scale=Math.min(r.width*0.9/Math.max(x1-x0,1), r.height*0.8/Math.max(y1-y0,1));
+  ox=r.width/2-(x0+x1)/2*scale;
+  oy=r.height/2-(y0+y1)/2*scale+r.height*0.04;
+}
+
+function drawScene(){
+  const r=scene.getBoundingClientRect();
+  sx.clearRect(0,0,r.width,r.height);
+
+  sx.strokeStyle=css('--line'); sx.lineWidth=1; sx.beginPath();
+  const g0x=Math.floor(bx[0]/GRID)*GRID, g1x=Math.ceil(bx[1]/GRID)*GRID;
+  const g0y=Math.floor(by[0]/GRID)*GRID, g1y=Math.ceil(by[1]/GRID)*GRID;
+  for(let gx=g0x; gx<=g1x; gx+=GRID){
+    const a=proj(gx-cx,g0y-cy,0), b=proj(gx-cx,g1y-cy,0);
+    sx.moveTo(a[0],a[1]); sx.lineTo(b[0],b[1]);
+  }
+  for(let gy=g0y; gy<=g1y; gy+=GRID){
+    const a=proj(g0x-cx,gy-cy,0), b=proj(g1x-cx,gy-cy,0);
+    sx.moveTo(a[0],a[1]); sx.lineTo(b[0],b[1]);
+  }
+  sx.stroke();
+
+  sx.strokeStyle=css('--line'); sx.lineWidth=2; sx.globalAlpha=.85; sx.beginPath();
+  for(let i=0;i<=head;i++){ const q=proj(P[i][1]-cx,P[i][2]-cy,0); i?sx.lineTo(q[0],q[1]):sx.moveTo(q[0],q[1]); }
+  sx.stroke(); sx.globalAlpha=1;
+
+  const V=css('--violet');
+  sx.strokeStyle=V; sx.lineWidth=1.4; sx.setLineDash([4,4]); sx.beginPath();
+  for(let a=0;a<=64;a++){
+    const th=a/64*Math.PI*2;
+    const q=proj(M.wps.LOIT[0]-cx+M.loiterRad*Math.cos(th), M.wps.LOIT[1]-cy+M.loiterRad*Math.sin(th), 0);
+    a?sx.lineTo(q[0],q[1]):sx.moveTo(q[0],q[1]);
+  }
+  sx.stroke(); sx.setLineDash([]);
+  sx.font='10px '+css('--mono'); sx.fillStyle=V; sx.textAlign='center';
+  for(const [name,w] of Object.entries(M.wps)){
+    const q=proj(w[0]-cx,w[1]-cy,0);
+    sx.beginPath(); sx.arc(q[0],q[1],4,0,7); sx.fill();
+    sx.fillText(name,q[0],q[1]-9);
+  }
+  const h=proj(-cx,-cy,0);
+  sx.fillStyle=css('--ink-faint');
+  sx.beginPath(); sx.arc(h[0],h[1],3.5,0,7); sx.fill();
+  // The first logged point is only the takeoff if the log starts on the ground.
+  sx.fillText(P[0][3]-M.ground > 3 ? 'INICIO DEL LOG' : 'DESPEGUE',h[0],h[1]+16);
+
+  sx.strokeStyle=css('--line'); sx.lineWidth=1; sx.globalAlpha=.6; sx.beginPath();
+  for(let i=0;i<=head;i+=26){
+    const a=proj(P[i][1]-cx,P[i][2]-cy,0), b=proj(P[i][1]-cx,P[i][2]-cy,wz(P[i][3]));
+    sx.moveTo(a[0],a[1]); sx.lineTo(b[0],b[1]);
+  }
+  sx.stroke(); sx.globalAlpha=1;
+
+  sx.lineWidth=2.2; sx.lineJoin='round'; sx.lineCap='round';
+  for(let i=1;i<=head;i++){
+    const a=proj(P[i-1][1]-cx,P[i-1][2]-cy,wz(P[i-1][3]));
+    const b=proj(P[i][1]-cx,P[i][2]-cy,wz(P[i][3]));
+    sx.strokeStyle=rollColor(P[i][4]);
+    sx.beginPath(); sx.moveTo(a[0],a[1]); sx.lineTo(b[0],b[1]); sx.stroke();
+  }
+
+  const p=P[head], q=proj(p[1]-cx,p[2]-cy,wz(p[3])), prev=P[Math.max(0,head-3)];
+  sx.save(); sx.translate(q[0],q[1]); sx.rotate(Math.atan2(p[1]-prev[1],p[2]-prev[2])*Math.cos(cam.el));
+  sx.fillStyle=rollColor(p[4]);
+  sx.beginPath(); sx.moveTo(0,-9); sx.lineTo(6.5,7); sx.lineTo(0,3.5); sx.lineTo(-6.5,7); sx.closePath(); sx.fill();
+  sx.restore();
+  const gq=proj(p[1]-cx,p[2]-cy,0);
+  sx.strokeStyle=rollColor(p[4]); sx.globalAlpha=.55; sx.lineWidth=1;
+  sx.beginPath(); sx.moveTo(q[0],q[1]); sx.lineTo(gq[0],gq[1]); sx.stroke(); sx.globalAlpha=1;
+
+  sx.fillStyle=css('--ink-faint'); sx.textAlign='left'; sx.font='10px '+css('--mono');
+  sx.fillText('rejilla '+GRID+' m · altitud ×'+ZEX.toFixed(1), 14, r.height-12);
+  sx.textAlign='right';
+  sx.fillText('arrastrar: girar · shift / clic der.: mover · rueda: zoom · doble clic: encuadrar', r.width-14, r.height-12);
+}
+
+let dragging=false, panning=false, last=null;
+scene.addEventListener('pointerdown', e=>{
+  dragging=true; panning=e.shiftKey || e.button===1 || e.button===2;
+  last=[e.clientX,e.clientY]; scene.classList.add('drag'); scene.setPointerCapture(e.pointerId);
+});
+scene.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  const dx=e.clientX-last[0], dy=e.clientY-last[1];
+  if(panning){ ox+=dx; oy+=dy; }
+  else{
+    cam.az += dx*0.008;
+    cam.el = Math.max(0.04, Math.min(1.52, cam.el+dy*0.006));
+    setPreset(null);
+  }
+  last=[e.clientX,e.clientY]; drawScene();
+});
+scene.addEventListener('contextmenu', e=>e.preventDefault());
+scene.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const r=scene.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  const k=Math.exp(-e.deltaY*0.0015);          // zoom about the cursor
+  ox=mx-(mx-ox)*k; oy=my-(my-oy)*k; scale*=k; drawScene();
+}, {passive:false});
+scene.addEventListener('dblclick', ()=>{ frame(); drawScene(); });
+document.getElementById('v-fit').onclick=()=>{ frame(); drawScene(); };
+const zexIn=document.getElementById('v-zex'), zexOut=document.getElementById('v-zex-o');
+zexIn.value=ZEX; zexOut.textContent='×'+ZEX.toFixed(1);
+zexIn.oninput=()=>{ ZEX=+zexIn.value; zexOut.textContent='×'+ZEX.toFixed(1); frame(); drawScene(); };
+addEventListener('pointerup', ()=>{dragging=false; scene.classList.remove('drag');});
+const presets={'v-iso':[-0.62,0.52],'v-top':[0,1.5207],'v-side':[0,0.05]};
+function setPreset(id){ for(const k in presets) document.getElementById(k).setAttribute('aria-pressed', String(k===id)); }
+for(const k in presets) document.getElementById(k).onclick=()=>{cam.az=presets[k][0]; cam.el=presets[k][1]; setPreset(k); frame(); drawScene();};
+
+/* ---------- gráficas ---------- */
+function lineChart(id, idx, opts){
+  const cv=document.getElementById(id), c=cv.getContext('2d');
+  function draw(){
+    const r=cv.getBoundingClientRect(), d=window.devicePixelRatio||1;
+    cv.width=r.width*d; cv.height=r.height*d; c.setTransform(d,0,0,d,0,0);
+    const W=r.width, H=r.height, PL=44, PR=8, PT=8, PB=16;
+    const vals=P.map(p=>p[idx]);
+    let lo=Math.min(...vals), hi=Math.max(...vals);
+    if(opts.sym){ const m=Math.max(Math.abs(lo),Math.abs(hi)); lo=-m; hi=m; }
+    if(opts.ref!==undefined){ lo=Math.min(lo,opts.ref); hi=Math.max(hi,opts.ref); }
+    const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
+    const X=i=>PL+(i/(P.length-1))*(W-PL-PR);
+    const Y=v=>PT+(1-(v-lo)/(hi-lo))*(H-PT-PB);
+
+    c.clearRect(0,0,W,H);
+    if(opts.band){
+      c.fillStyle=css('--line'); c.globalAlpha=.5;
+      c.fillRect(PL,Y(opts.band[1]),W-PL-PR,Y(opts.band[0])-Y(opts.band[1]));
+      c.globalAlpha=1;
+    }
+    if(opts.ref!==undefined){
+      c.strokeStyle=css('--nominal'); c.lineWidth=1; c.setLineDash([5,4]);
+      c.beginPath(); c.moveTo(PL,Y(opts.ref)); c.lineTo(W-PR,Y(opts.ref)); c.stroke(); c.setLineDash([]);
+    }
+    c.strokeStyle=css('--line'); c.lineWidth=1;
+    c.beginPath(); c.moveTo(PL,PT); c.lineTo(PL,H-PB); c.lineTo(W-PR,H-PB); c.stroke();
+    c.fillStyle=css('--ink-faint'); c.font='10px '+css('--mono'); c.textAlign='right';
+    [hi,(hi+lo)/2,lo].forEach(v=>c.fillText(v.toFixed(0),PL-6,Y(v)+3));
+
+    c.lineWidth=1.5; c.lineJoin='round';
+    for(let i=1;i<P.length;i++){
+      c.strokeStyle=opts.colorByRoll?rollColor(P[i][4]):css('--trace');
+      c.beginPath(); c.moveTo(X(i-1),Y(P[i-1][idx])); c.lineTo(X(i),Y(P[i][idx])); c.stroke();
+    }
+    c.strokeStyle=css('--ink-dim'); c.lineWidth=1; c.globalAlpha=.75;
+    c.beginPath(); c.moveTo(X(head),PT); c.lineTo(X(head),H-PB); c.stroke(); c.globalAlpha=1;
+    c.fillStyle=rollColor(P[head][4]);
+    c.beginPath(); c.arc(X(head),Y(P[head][idx]),3,0,7); c.fill();
+  }
+  cv.addEventListener('pointermove', e=>{
+    const r=cv.getBoundingClientRect(), PL=44, PR=8;
+    const f=Math.max(0,Math.min(1,(e.clientX-r.left-PL)/(r.width-PL-PR)));
+    head=Math.round(f*(P.length-1)); scrub.value=head; render();
+  });
+  return draw;
+}
+const charts=[
+  lineChart('c-roll',4,{band:[-M.rollLimit,M.rollLimit], colorByRoll:true, sym:true}),
+  lineChart('c-spd',6,{ref:M.cruise}),
+  lineChart('c-alt',3,{ref:M.ground}),
+  ...(M.hasThr ? [lineChart('c-thr',7,{ref:M.trimThr})] : []),
+];
+
+/* ---------- transporte ---------- */
+const playBtn=document.getElementById('play');
+const rt=document.getElementById('r-t'), ra=document.getElementById('r-alt'),
+      rs=document.getElementById('r-spd'), rr=document.getElementById('r-roll');
+function render(){
+  const p=P[head];
+  rt.textContent=p[0].toFixed(1); ra.textContent=(p[3]-M.ground).toFixed(0);
+  rs.textContent=p[6].toFixed(1); rr.textContent=(p[4]>=0?'+':'')+p[4].toFixed(1);
+  drawScene(); charts.forEach(d=>d());
+}
+scrub.oninput=()=>{head=+scrub.value; render();};
+let timer=null;
+playBtn.onclick=()=>{
+  if(timer){ clearInterval(timer); timer=null; playBtn.textContent='Reproducir'; return; }
+  if(head>=P.length-1) head=0;
+  playBtn.textContent='Pausar';
+  timer=setInterval(()=>{
+    head+=2;
+    if(head>=P.length-1){ head=P.length-1; clearInterval(timer); timer=null; playBtn.textContent='Reproducir'; }
+    scrub.value=head; render();
+  },28);
+};
+addEventListener('resize', ()=>{fit(); render();});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+fit(); render();
+</script>
+</body>
+</html>

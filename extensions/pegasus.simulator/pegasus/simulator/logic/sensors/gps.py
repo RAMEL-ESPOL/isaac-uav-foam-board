@@ -178,7 +178,7 @@ class GPS(Sensor):
             "fix_type": self._fix_type,
             "eph": self._eph,
             "epv": self._epv,
-            "cog": 0.0,  # cog,
+            "cog": cog,
             "sattelites_visible": self._sattelites_visible,
             "latitude_gt": latitude_gt,
             "longitude_gt": longitude_gt,

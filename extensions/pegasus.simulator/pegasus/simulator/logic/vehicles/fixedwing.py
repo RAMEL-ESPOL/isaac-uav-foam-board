@@ -152,6 +152,8 @@ class FixedWingConfig:
         # Backward compatibility: "full" is treated as "autonomous".
         self.simulation_mode = "autonomous"
         self.debug_mode = False
+        self.body_name = "/body"
+        self.propeller_name = "/propeller"
 
         # Optional fallback mass for diagnostics when USD mass cannot be read.
         self.mass_kg = 1.0
@@ -267,6 +269,8 @@ class FixedWing(Vehicle):
         self._elevator_sign = float(config.elevator_sign)
         self._throttle_sign = float(config.throttle_sign)
         self._rudder_sign = float(config.rudder_sign)
+        self._body_name = getattr(config, 'body_name', "/body")
+        self._propeller_name = getattr(config, 'propeller_name', "/propeller")
         
         # Current control inputs (will be updated from backend)
         self._throttle = 0.0      # 0.0 to 1.0
@@ -370,7 +374,7 @@ class FixedWing(Vehicle):
 
         mass_kg = self._mass_kg_fallback
         try:
-            body_prim = self._world.stage.GetPrimAtPath(self._stage_prefix + "/body")
+            body_prim = self._world.stage.GetPrimAtPath(self._stage_prefix + self._body_name)
             if body_prim and body_prim.IsValid():
                 mass_attr = UsdPhysics.MassAPI(body_prim).GetMassAttr()
                 if mass_attr and mass_attr.HasAuthoredValue():
@@ -437,8 +441,10 @@ class FixedWing(Vehicle):
             self.debug_drawer.draw_vector(pos, _to_world(forces_body), color=(1, 0, 0, 1), scale=0.1)
             self.debug_drawer.draw_vector(offset_pos, _to_world(torques_body), color=(0, 0, 1, 1), scale=0.1)
 
-            self.apply_force(forces_body, body_part="/body")
-            self.apply_torque(torques_body, body_part="/body")
+            # Apply at CoM offset to avoid parasitic yaw from off-center body origin
+            _offset = getattr(self._config, 'force_application_offset', np.array([0.0, 0.0, 0.0]))
+            self.apply_force(forces_body, pos=_offset, body_part=self._body_name)
+            self.apply_torque(torques_body, body_part=self._body_name)
 
             self._log_state(
                 aot=alpha,
@@ -470,15 +476,23 @@ class FixedWing(Vehicle):
             total_moments = np.clip(aero_moments + manual_pitch_torque, MIN_MOMENTS, MAX_MOMENTS)
             drag_force = np.clip(self._drag.update(self._state, dt), MIN_FORCE, MAX_FORCE)
 
-            self.debug_drawer.draw_vector(pos, _to_world(thrust_force), color=(1, 0, 0, 1), scale=0.1)
-            self.debug_drawer.draw_vector(pos, _to_world(aero_forces), color=(1, 1, 0, 1), scale=0.1)
-            self.debug_drawer.draw_vector(offset_pos, _to_world(total_moments), color=(0, 0, 1, 1), scale=0.1)
-            self.debug_drawer.draw_vector(offset_pos, _to_world(drag_force), color=(0, 1, 1, 1), scale=0.1)
+            _offset = getattr(self._config, 'force_application_offset', np.array([0.0, 0.0, 0.0]))
 
-            self.apply_force(thrust_force, body_part="/body")
-            self.apply_force(aero_forces, body_part="/body")
-            self.apply_force(drag_force, body_part="/body")
-            self.apply_torque(total_moments, body_part="/body")
+            # Convert body-frame CoM offset to world frame for correct arrow origin
+            r_world = Rotation.from_quat(self._state.attitude)
+            com_world = pos + r_world.apply(_offset)
+            com_vis = [com_world[0], com_world[1], com_world[2] + 0.05]  # slight z lift for visibility
+
+            self.debug_drawer.draw_vector(com_vis, _to_world(thrust_force), color=(1, 0, 0, 1), scale=0.1)
+            self.debug_drawer.draw_vector(com_vis, _to_world(aero_forces), color=(1, 1, 0, 1), scale=0.1)
+            self.debug_drawer.draw_vector(com_vis, _to_world(total_moments), color=(0, 0, 1, 1), scale=0.1)
+            self.debug_drawer.draw_vector(com_vis, _to_world(drag_force), color=(0, 1, 1, 1), scale=0.1)
+
+            # Apply forces at CoM to avoid parasitic pitch/yaw torques
+            self.apply_force(thrust_force, pos=_offset, body_part=self._body_name)
+            self.apply_force(aero_forces, pos=_offset, body_part=self._body_name)
+            self.apply_force(drag_force, pos=_offset, body_part=self._body_name)
+            self.apply_torque(total_moments, body_part=self._body_name)
             self._update_propeller_visual(thrust_force[0])
             self._maybe_log_takeoff_viability(dt, thrust_force, aero_forces, drag_force)
 
@@ -514,10 +528,13 @@ class FixedWing(Vehicle):
                 self.debug_drawer.draw_vector(offset_pos, _to_world(aero_moments), color=(0, 0, 1, 1), scale=0.1)
                 self.debug_drawer.draw_vector(offset_pos, _to_world(drag_force), color=(0, 1, 1, 1), scale=0.1)
 
-            self.apply_force(thrust_force, body_part="/body")
-            self.apply_force(aero_forces, body_part="/body")
-            self.apply_force(drag_force, body_part="/body")
-            self.apply_torque(aero_moments, body_part="/body")
+            # Offset for force application (to handle off-center CAD origins)
+            offset_pos = getattr(self._config, 'force_application_offset', np.array([0.0, 0.0, 0.0]))
+
+            self.apply_force(thrust_force, pos=offset_pos, body_part=self._body_name)
+            self.apply_force(aero_forces, pos=offset_pos, body_part=self._body_name)
+            self.apply_force(drag_force, pos=offset_pos, body_part=self._body_name)
+            self.apply_torque(aero_moments, body_part=self._body_name)
             self._update_propeller_visual(thrust_force[0])
             self._maybe_log_takeoff_viability(dt, thrust_force, aero_forces, drag_force)
 
@@ -560,14 +577,10 @@ class FixedWing(Vehicle):
 
         raw_inputs = np.asarray(raw_inputs, dtype=float)
 
-        # If backend is disarmed (or publishes all-zero references while waiting for first commands),
-        # force neutral controls to avoid spurious pre-arm thrust/surface inputs.
-        if (hasattr(backend, "_armed") and not backend._armed) or np.all(np.abs(raw_inputs[:4]) < 1e-6):
-            self._throttle = 0.0
-            self._elevator = 0.0
-            self._aileron = 0.0
-            self._rudder = 0.0
-            return
+        # NOTA: No bloqueamos por backend._armed porque el GCS (udp:14550) puede
+        # consumir los HEARTBEAT antes de que el backend los reciba.
+        # Si ArduPilot está desarmado, los servos que envía son neutros/cero — lo
+        # detectamos abajo al calcular las superficies. No necesitamos el flag aquí.
 
         # Decode ArduPilot/PX4 style scaled outputs when ThrusterControl metadata is available.
         has_rotor_data = hasattr(backend, "_rotor_data")
@@ -796,8 +809,29 @@ class FixedWing(Vehicle):
         if self._prop_joint_resolved:
             return
 
-        articulation = self.get_dc_interface().get_articulation(self._stage_prefix + "/propeller")
+        # Try to get the articulation from the root prim (where ArticulationRootAPI lives)
+        articulation = None
+        # First, try the body_name's parent (the root xform of the imported model)
+        body_name = getattr(self, '_body_name', '/body')
+        parts = body_name.strip('/').split('/')
+        if len(parts) >= 1:
+            root_prim_path = self._stage_prefix + '/' + parts[0]
+        else:
+            root_prim_path = self._stage_prefix + self._propeller_name
+
+        for candidate_path in [root_prim_path, self._stage_prefix + self._propeller_name, self._stage_prefix]:
+            try:
+                articulation = self.get_dc_interface().get_articulation(candidate_path)
+                if articulation is not None:
+                    carb.log_info(f"FixedWing: Found articulation at '{candidate_path}'")
+                    break
+            except RuntimeError:
+                carb.log_info(f"FixedWing: No articulation at '{candidate_path}', trying next...")
+                continue
+
         if articulation is None:
+            self._prop_joint_resolved = True
+            carb.log_warn(f"FixedWing: Could not find articulation for propeller. Skipping visual spin.")
             return
 
         try:

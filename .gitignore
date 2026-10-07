@@ -45,4 +45,9 @@ log/
 
 # garbage
 tmp
+tmp.txt
 forces_log*
+
+# Flight logs (generated at runtime)
+examples/yoy_trainer*/flight_logs/*
+!examples/yoy_trainer*/flight_logs/.gitkeep

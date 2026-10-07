@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="foam_board_plane_complete">
+  <link
+    name="base_link">
+    <!-- Propiedades actualizadas con ensamble completo (electrónica incluida):
+         Batería 2200mAh + ESC 30A + 4x SG-90 | SolidWorks, Mayo 2026 -->
+    <inertial>
+      <!-- CG desplazado hacia atrás 6cm (X: -0.274 -> -0.334) para contrarrestar tendencia nose-down -->
+      <origin
+        xyz="-0.334590 0.087640 0.094860"
+        rpy="0 0 0" />
+      <mass
+        value="0.612450" />
+      <inertia
+        ixx="0.01294008"
+        ixy="-0.00130824"
+        ixz="0.0000015309"
+        iyy="0.02348742"
+        iyz="0.00004323"
+        izz="0.01437606" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.69804 0.69804 0.69804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="propeller_link">
+    <inertial>
+      <origin
+        xyz="-1.2807E-05 -0.0081563 3.9157E-06"
+        rpy="0 0 0" />
+      <mass
+        value="0.02286" />
+      <inertia
+        ixx="5.1744E-05"
+        ixy="1.044E-11"
+        ixz="4.2953E-05"
+        iyy="8.8613E-05"
+        iyz="-1.3366E-11"
+        izz="3.7173E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/propeller_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.29804 0.29804 0.29804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/propeller_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="propeller_joint"
+    type="continuous">
+    <origin
+      xyz="0.025644 0.094804 0.085012"
+      rpy="0 -0.13478 1.5708" />
+    <parent
+      link="base_link" />
+    <child
+      link="propeller_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="aileron_left_link">
+    <inertial>
+      <origin
+        xyz="-0.024102 0.0059588 0.21598"
+        rpy="0 0 0" />
+      <mass
+        value="0.0068536" />
+      <inertia
+        ixx="0.00011015"
+        ixy="4.0804E-07"
+        ixz="-8.8127E-07"
+        iyy="0.00011115"
+        iyz="3.1364E-07"
+        izz="1.3243E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/aileron_left_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.69804 0.69804 0.69804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/aileron_left_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="aileron_left_joint"
+    type="revolute">
+    <origin
+      xyz="-0.29295 0.15484 0.15189"
+      rpy="-1.5708 0.25534 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="aileron_left_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.785"
+      upper="0.785"
+      effort="10"
+      velocity="10" />
+  </joint>
+  <link
+    name="aileron_right_link">
+    <inertial>
+      <origin
+        xyz="-0.024102 -0.0059588 0.18115"
+        rpy="0 0 0" />
+      <mass
+        value="0.0068536" />
+      <inertia
+        ixx="0.00011015"
+        ixy="-4.0804E-07"
+        ixz="-8.8127E-07"
+        iyy="0.00011115"
+        iyz="-3.1364E-07"
+        izz="1.3243E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/aileron_right_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.69804 0.69804 0.69804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/aileron_right_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="aileron_right_joint"
+    type="revolute">
+    <origin
+      xyz="-0.29295 0 0.15189"
+      rpy="1.5708 0.25534 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="aileron_right_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.785"
+      upper="0.785"
+      effort="10"
+      velocity="10" />
+  </joint>
+  <link
+    name="elevator_link">
+    <inertial>
+      <origin
+        xyz="-0.018181 -0.0068045 -0.09484"
+        rpy="0 0 0" />
+      <mass
+        value="0.0040402" />
+      <inertia
+        ixx="4.9059E-05"
+        ixy="-1.9693E-07"
+        ixz="-7.7106E-21"
+        iyy="4.9334E-05"
+        iyz="-4.1198E-21"
+        izz="4.972E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/elevator_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.69804 0.69804 0.69804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/elevator_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="elevator_joint"
+    type="revolute">
+    <origin
+      xyz="-0.704 0 0.13619"
+      rpy="1.5708 0.48555 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="elevator_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.785"
+      upper="0.785"
+      effort="10"
+      velocity="10" />
+  </joint>
+  <link
+    name="rudder_link">
+    <inertial>
+      <origin
+        xyz="-0.0081403 -0.0055454 -0.075554"
+        rpy="0 0 0" />
+      <mass
+        value="0.0018454" />
+      <inertia
+        ixx="2.3775E-06"
+        ixy="1.4761E-07"
+        ixz="5.3133E-08"
+        iyy="1.8423E-06"
+        iyz="-7.7182E-07"
+        izz="6.6504E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/rudder_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.69804 0.69804 0.69804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/rudder_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="rudder_joint"
+    type="revolute">
+    <origin
+      xyz="-0.704 0.09734 0.1292"
+      rpy="-2.7845 0 -1.0954" />
+    <parent
+      link="base_link" />
+    <child
+      link="rudder_link" />
+    <axis
+      xyz="0 -0.34959 -0.9369" />
+    <limit
+      lower="-0.785"
+      upper="0.785"
+      effort="10"
+      velocity="10" />
+  </joint>
+  <link
+    name="left_wheel_link">
+    <inertial>
+      <origin
+        xyz="0.01 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.048447" />
+      <inertia
+        ixx="1.4752E-05"
+        ixy="-2.9993E-21"
+        ixz="-3.2769E-21"
+        iyy="8.8946E-06"
+        iyz="0"
+        izz="8.8946E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/left_wheel_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.49804 0.49804 0.49804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/left_wheel_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="-0.20383 0.24684 -0.025321"
+      rpy="-2.2671 0 -1.5708" />
+    <parent
+      link="base_link" />
+    <child
+      link="left_wheel_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="right_wheel_link">
+    <inertial>
+      <origin
+        xyz="0.01 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.048447" />
+      <inertia
+        ixx="1.4752E-05"
+        ixy="3.1559E-21"
+        ixz="-2.8731E-21"
+        iyy="8.8946E-06"
+        iyz="-1.6941E-21"
+        izz="8.8946E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/right_wheel_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.49804 0.49804 0.49804 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/right_wheel_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="-0.20383 -0.057128 -0.025321"
+      rpy="2.3836 0 -1.5708" />
+    <parent
+      link="base_link" />
+    <child
+      link="right_wheel_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="tair_wheel_link">
+    <inertial>
+      <origin
+        xyz="3.3307E-16 1.3878E-17 -0.0081872"
+        rpy="0 0 0" />
+      <mass
+        value="0.008432" />
+      <inertia
+        ixx="4.5143E-07"
+        ixy="-5.3767E-24"
+        ixz="-5.6083E-22"
+        iyy="4.5143E-07"
+        iyz="-7.8582E-23"
+        izz="6.4523E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/tair_wheel_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://foam_board_plane_complete/meshes/tair_wheel_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="tair_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="-0.69619 0.079537 0.097384"
+      rpy="-1.5708 -0.2514 -3.1025" />
+    <parent
+      link="base_link" />
+    <child
+      link="tair_wheel_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>

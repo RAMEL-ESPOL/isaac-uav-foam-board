@@ -548,7 +548,6 @@ class ArduPilotMavlinkBackend(Backend):
         self._sensor_data.sim_velocity_inertial[2] = lin_vel[2]
 
         # Compute the air_speed - assumed indicated airspeed due to flow aligned with pitot (body x)
-        body_vel = state.get_linear_body_velocity_ned_frd()
         body_vel = state.linear_body_velocity
         self._sensor_data.sim_ind_airspeed = int(body_vel[0] * 100)
         self._sensor_data.sim_true_airspeed = int(
@@ -690,32 +689,34 @@ class ArduPilotMavlinkBackend(Backend):
         self.ap.post_update(sim_time=self._current_utime, sensor_data=self._sensor_data)
 
     def update_is_armed(self):
-        # Use this loop to emulate a do-while loop (make sure this runs at least once)
-        msg = self._connection.recv_match(blocking=False)
-
-        # If a message was received
-        if msg is not None:
-            if not self._armed:
-                if (
-                    msg.get_type() == "HEARTBEAT"
-                    and msg.type != mavutil.mavlink.MAV_TYPE_GCS
-                ):
-                    is_armed = self._connection.motors_armed()
-                    if is_armed:
-                        self._armed = True
-                        carb.log_warn("Drone is armed.")
-                    else:
-                        if self._armed == True:
-                            carb.log_warn("Drone is Disarmed.")
-                        self._armed = False
+        # Drain the MAVLink queue to process all pending messages,
+        # otherwise we might fall behind and miss the HEARTBEAT.
+        while True:
+            msg = self._connection.recv_match(blocking=False)
+            if msg is None:
+                break
+            
+            if msg.get_type() == "HEARTBEAT" and msg.type != mavutil.mavlink.MAV_TYPE_GCS:
+                is_armed = (msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
+                if is_armed and not self._armed:
+                    self._armed = True
+                    carb.log_warn("Drone is armed.")
+                elif not is_armed and self._armed:
+                    self._armed = False
+                    carb.log_warn("Drone is Disarmed.")
 
     def update_motor_commands(self, servos):
-        if self._armed and len(servos) != 0:
-            carb.log_info(f"Update Servos: {servos}")
+        if not self._armed:
+            self._rotor_data.zero_input_reference()
+            return
+            
+        if len(servos) != 0:
+            # Only update if we received valid servos
             self._rotor_data.update_input_reference(servos)
         else:
-            carb.log_warn(f"Zero servo input ! \n Servos : {servos} \n DroneArm: {self._armed}")
-            self._rotor_data.zero_input_reference()
+            # Jitter or duplicate packet from ArduPilot SITL.
+            # DO NOT zero the inputs here, just retain the previous state!
+            pass
 
     def send_heartbeat(self, mav_type=mavutil.mavlink.MAV_TYPE_GENERIC):
         """

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="yoy_trainer_v2">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.25152 -0.019648 -0.013068"
+        rpy="0 0 0" />
+      <mass
+        value="0.52436" />
+      <!-- Tensor de inercia tomado de SOLIDWORKS Mass Properties del ensamble
+           Esamble_nuevo_aterrizaje, bloque "taken at the center of mass and
+           aligned with the output coordinate system", con "Report coordinate
+           values relative to: ROS_FLU".  Valores fuente, en g*mm^2:
+              Lxx = 10314902.63   Lxy =   -5046.92   Lxz = -969707.04
+              Lyy = 12865810.64   Lyz =    6483.67
+              Lzz = 20917152.83
+           Conversion: g*mm^2 -> kg*m^2 es x1e-9, y los productos cambian de
+           signo porque SolidWorks reporta el producto de inercia (integral xy dm)
+           mientras que el tensor del URDF usa su negativo.
+           El bloque que escribio SW2URDF (ixx=0.0025201, iyy=0.00093983,
+           izz=0.0033328) daba un radio de giro en cabeceo de 43 mm para un
+           fuselaje de 812 mm: imposible. -->
+      <inertia
+        ixx="0.010314903"
+        ixy="0.000005047"
+        ixz="0.000969707"
+        iyy="0.012865811"
+        iyz="-0.000006484"
+        izz="0.020917153" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- Colision: el fuselaje/alas SIN tren de aterrizaje (convex hull) + tres
+         esferas de contacto con el suelo. Con el hull de base_link.STL completo
+         el avion tocaba el suelo con el hull y su friccion lo capotaba al
+         acelerar: las ruedas estan solo 31 mm por delante del CG.
+         Las esferas llevan un material de baja friccion (urdf_to_usd.py) que
+         hace de rodadura. Medidas sacadas de base_link.STL:
+           ruedas: diametro 30 mm, centro x=-0.2206 z=-0.1301,
+                   y=-0.1626 / +0.1234 (simetricas respecto al CG, y=-0.0196)
+           cola:   punto de apoyo x=-0.7099 z=-0.0126 -> 15.2 deg de cabeceo
+                   en reposo; la esfera sobresale 3 mm para ser el unico contacto.
+         El cuerpo se regenera con scripts/make_body_collision.py. -->
+    <collision name="airframe">
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="../meshes/base_link_body_collision.STL" />
+      </geometry>
+    </collision>
+    <collision name="wheel_right">
+      <origin
+        xyz="-0.2206 -0.1626 -0.1301"
+        rpy="0 0 0" />
+      <geometry>
+        <sphere
+          radius="0.015" />
+      </geometry>
+    </collision>
+    <collision name="wheel_left">
+      <origin
+        xyz="-0.2206 0.1234 -0.1301"
+        rpy="0 0 0" />
+      <geometry>
+        <sphere
+          radius="0.015" />
+      </geometry>
+    </collision>
+    <collision name="tail_contact">
+      <origin
+        xyz="-0.7099 -0.0196 -0.0056"
+        rpy="0 0 0" />
+      <geometry>
+        <sphere
+          radius="0.010" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

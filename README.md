@@ -80,7 +80,31 @@ self.aircraft = FixedWing(
 )
 ```
 
+## Foamboard Fixed-Wing Digital Twin (YOY Trainer)
+
+[`examples/yoy_trainer_v2`](examples/yoy_trainer_v2/) is the digital twin of a
+low-cost foamboard fixed-wing aircraft (JoyPlanes YOY Trainer) used in the paper
+*Integration and Validation of Open-Source Fixed-Wing UAV Platforms for Low-Cost
+Autonomous Flight Research* (IEEE ETCM 2026). Its aerodynamic coefficients come
+from a CFD characterization of the airframe, and it flies closed-loop against
+ArduPilot SITL.
+
+```bash
+# Terminal 1 - Isaac Sim + ArduPilot SITL
+isaac_run examples/yoy_trainer_v2/14_yoy_trainer_v2_fixedwing.py --mode autonomous
+
+# Terminal 2 - once SITL reports a heartbeat: sustained loiter, 150 m radius
+python3 examples/yoy_trainer_v2/scripts/autonomous_flight.py --loiter-now --duration 300 --radius 150
+```
+
+The example's [README](examples/yoy_trainer_v2/README.md) lists the aircraft
+parameters, the mission flags and the flight-report tooling. CAD, autopilot
+parameters, CFD data and the flight logs behind the paper are published in
+[RAMEL-ESPOL/OpenSourceFixedWingUAV](https://github.com/RAMEL-ESPOL/OpenSourceFixedWingUAV).
+
 ## Latest Updates
+- Added the YOY Trainer foamboard digital twin (`examples/yoy_trainer_v2`).
+- Patched the fixed-wing aerodynamic model, GPS sensor, ArduPilot backend and force debugger.
 - Refined fixed-wing aerodynamics and integrated ArduPilot control flow (`d799373`).
 - Added manual flight/debug mode for direct force and moment control (`3b23ff3`).
 - Added decoupled force debugging tools and a tracking camera workflow (`a09c34f`).

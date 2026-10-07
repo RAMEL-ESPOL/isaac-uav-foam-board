@@ -46,7 +46,7 @@ class ForceControlWindow:
                 ui.Label("Torques", height=20, style={"font_size": 16, "color": 0xFFDDDDDD})
                 with ui.VStack(spacing=2):
                     self._create_slider("Torque X (Roll)", self.models["tx"], -50.0, 50.0)
-                    self._create_slider("Torque Y (Pitch)", self.models["ty"], -50.0, 50.0)
+                    self._create_slider("Torque Y (Pitch)", self.models["ty"], -15.0, 15.0, step=0.01)
                     self._create_slider("Torque Z (Yaw)",  self.models["tz"], -50.0, 50.0)
 
                 ui.Spacer(height=15)
@@ -55,12 +55,19 @@ class ForceControlWindow:
                 ui.Button("ZERO ALL", height=40, clicked_fn=self.zero_all, 
                           style={"background_color": 0xFF5555AA, "font_size": 14})
 
-    def _create_slider(self, label, model, min_val, max_val):
-        """Helper to create a consistent label + float drag row"""
-        with ui.HStack(height=24):
+    def _create_slider(self, label, model, min_val, max_val, step=0.1):
+        """Helper to create a consistent label + float drag row + reset button"""
+        with ui.HStack(height=24, spacing=5):
             ui.Label(label, width=120, style={"color": 0xFFAAAAAA})
-            # FloatDrag is often better than FloatSlider for physics as it allows typing
-            ui.FloatDrag(model, min=min_val, max=max_val, step=0.1)
+            # FloatDrag with custom step for precision
+            ui.FloatDrag(model, min=min_val, max=max_val, step=step)
+            # Individual reset button
+            ui.Button("0", width=25, clicked_fn=lambda: self.reset_model(model),
+                      style={"background_color": 0xFF777777, "font_size": 10})
+
+    def reset_model(self, model):
+        """Resets a single model to 0"""
+        model.as_float = 0.0
 
     def zero_all(self):
         """Resets all forces to 0"""
